@@ -1,4 +1,4 @@
-package com.example.fish
+package com.bigbass.log
 
 import io.flutter.embedding.android.FlutterActivity
 
