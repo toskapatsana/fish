@@ -3,33 +3,39 @@ import 'package:uuid/uuid.dart';
 import '../models/catch_entry.dart';
 import '../services/storage_service.dart';
 import '../services/weather_service.dart';
+import '../services/moon_service.dart';
 
 /// Provider for managing fishing data and state.
 /// 
-/// Handles all catch entries and provides real weather data from Open-Meteo API
+/// Handles all catch entries and provides real weather and moon data
 /// for the home screen fishing index calculation.
 class FishingProvider extends ChangeNotifier {
   final StorageService _storageService;
   final WeatherService _weatherService;
+  final MoonService _moonService;
   final Uuid _uuid = const Uuid();
 
   List<CatchEntry> _entries = [];
   bool _isLoading = false;
-  bool _isLoadingWeather = false;
+  bool _isRefreshing = false;
   String? _error;
 
   // Weather data from API
   WeatherData? _weatherData;
+  
+  // Moon data from API
+  MoonData? _moonData;
 
-  // Moon phase data (0-7: New, Waxing Crescent, First Quarter, 
-  // Waxing Gibbous, Full, Waning Gibbous, Last Quarter, Waning Crescent)
-  int _moonPhase = 0;
+  // Fallback moon phase (calculated locally if API fails)
+  int _fallbackMoonPhase = 0;
 
   FishingProvider({
     StorageService? storageService,
     WeatherService? weatherService,
+    MoonService? moonService,
   })  : _storageService = storageService ?? StorageService(),
-        _weatherService = weatherService ?? WeatherService();
+        _weatherService = weatherService ?? WeatherService(),
+        _moonService = moonService ?? MoonService();
 
   // ============ Getters ============
 
@@ -44,14 +50,17 @@ class FishingProvider extends ChangeNotifier {
   /// Whether data is currently loading.
   bool get isLoading => _isLoading;
 
-  /// Whether weather is currently loading.
-  bool get isLoadingWeather => _isLoadingWeather;
+  /// Whether data is refreshing (pull-to-refresh).
+  bool get isRefreshing => _isRefreshing;
 
   /// Current error message, if any.
   String? get error => _error;
 
   /// Whether we have weather data.
   bool get hasWeatherData => _weatherData != null;
+
+  /// Whether we have moon data from API.
+  bool get hasMoonData => _moonData != null;
 
   /// Weather condition string from API.
   String get weatherCondition => _weatherData?.condition ?? 'Loading...';
@@ -69,10 +78,13 @@ class FishingProvider extends ChangeNotifier {
   double get windSpeed => _weatherData?.windSpeed ?? 0;
 
   /// Current moon phase (0-7).
-  int get moonPhase => _moonPhase;
+  int get moonPhase => _moonData?.moonPhase ?? _fallbackMoonPhase;
 
-  /// Moon phase name based on current phase.
+  /// Moon phase name.
   String get moonPhaseName {
+    if (_moonData != null) {
+      return _moonData!.moonPhaseName;
+    }
     const phases = [
       'New Moon',
       'Waxing Crescent',
@@ -83,70 +95,64 @@ class FishingProvider extends ChangeNotifier {
       'Last Quarter',
       'Waning Crescent',
     ];
-    return phases[_moonPhase % 8];
+    return phases[_fallbackMoonPhase % 8];
   }
 
-  /// Moon phase icon (emoji for simplicity).
+  /// Moon phase icon.
   String get moonPhaseIcon {
+    if (_moonData != null) {
+      return _moonData!.icon;
+    }
     const icons = ['🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘'];
-    return icons[_moonPhase % 8];
+    return icons[_fallbackMoonPhase % 8];
   }
+
+  /// Moon illumination percentage (if available).
+  double get moonIllumination => _moonData?.moonIllumination ?? 0;
 
   /// Calculates the "Fishing Index" (0-100).
-  /// 
-  /// This is a simplified calculation based on:
-  /// - Moon phase (full moon and new moon are best)
-  /// - Weather conditions (mild weather is better)
-  /// - Wind speed
   int get fishingIndex {
     // Moon phase score (0-40 points)
-    // Full moon (4) and New moon (0) are best for fishing
+    final phase = moonPhase;
     int moonScore;
-    if (_moonPhase == 0 || _moonPhase == 4) {
+    if (phase == 0 || phase == 4) {
       moonScore = 40; // Best: New or Full moon
-    } else if (_moonPhase == 2 || _moonPhase == 6) {
+    } else if (phase == 2 || phase == 6) {
       moonScore = 25; // Moderate: Quarter moons
     } else {
       moonScore = 15; // Lower: Crescent/Gibbous
     }
 
-    // Weather score (0-40 points) based on real API data
-    int weatherScore = 30; // Default moderate score
+    // Weather score (0-40 points)
+    int weatherScore = 30;
     if (_weatherData != null) {
       final code = _weatherData!.weatherCode;
       if (code <= 3) {
-        // Clear to overcast - good conditions
-        weatherScore = code == 3 ? 38 : 32; // Overcast is slightly better
+        weatherScore = code == 3 ? 38 : 32;
       } else if (code <= 48) {
-        // Foggy - moderate
         weatherScore = 28;
       } else if (code <= 67) {
-        // Rain/drizzle - can be good for some fish
         weatherScore = 25;
       } else if (code <= 77) {
-        // Snow - poor conditions
         weatherScore = 15;
       } else if (code <= 82) {
-        // Rain showers - variable
         weatherScore = 22;
       } else {
-        // Thunderstorm - dangerous
         weatherScore = 10;
       }
     }
 
     // Wind score (0-20 points)
-    // Light wind (5-15 km/h) is ideal
     final wind = _weatherData?.windSpeed ?? 10;
     int windScore;
     if (wind >= 5 && wind <= 15) {
-      windScore = 20; // Ideal
+      windScore = 20;
     } else if (wind < 5) {
-      windScore = 15; // Too calm
+      windScore = 15;
     } else if (wind <= 25) {
-      windScore = 10; // A bit windy
+      windScore = 10;
     } else {
-      windScore = 5; // Too windy
+      windScore = 5;
     }
 
     return (moonScore + weatherScore + windScore).clamp(0, 100);
@@ -170,7 +176,7 @@ class FishingProvider extends ChangeNotifier {
 
   // ============ Actions ============
 
-  /// Initializes the provider by loading stored entries and weather.
+  /// Initializes the provider by loading stored entries and fetching data.
   Future<void> init() async {
     _isLoading = true;
     _error = null;
@@ -179,10 +185,10 @@ class FishingProvider extends ChangeNotifier {
     try {
       await _storageService.init();
       _entries = await _storageService.loadEntries();
-      _updateMoonPhase();
+      _calculateFallbackMoonPhase();
       
-      // Load weather in background
-      _loadWeather();
+      // Load weather and moon in parallel (background)
+      _loadAllData();
     } catch (e) {
       _error = 'Failed to load data: $e';
     } finally {
@@ -191,17 +197,30 @@ class FishingProvider extends ChangeNotifier {
     }
   }
 
-  /// Loads weather data from API.
-  Future<void> _loadWeather() async {
-    _isLoadingWeather = true;
+  /// Loads all external data (weather and moon).
+  Future<void> _loadAllData() async {
+    // Fetch weather and moon data in parallel
+    final results = await Future.wait([
+      _weatherService.getCurrentWeather(),
+      _moonService.getMoonDataDefault(),
+    ]);
+
+    _weatherData = results[0] as WeatherData?;
+    _moonData = results[1] as MoonData?;
+    
+    notifyListeners();
+  }
+
+  /// Refreshes all data (called by pull-to-refresh).
+  Future<void> refreshConditions() async {
+    _isRefreshing = true;
     notifyListeners();
 
     try {
-      _weatherData = await _weatherService.getCurrentWeather();
-    } catch (e) {
-      // Weather fetch failed silently - UI will show default values
+      _calculateFallbackMoonPhase();
+      await _loadAllData();
     } finally {
-      _isLoadingWeather = false;
+      _isRefreshing = false;
       notifyListeners();
     }
   }
@@ -226,7 +245,6 @@ class FishingProvider extends ChangeNotifier {
 
     final success = await _storageService.saveEntries(_entries);
     if (!success) {
-      // Rollback on failure
       _entries.remove(entry);
       _error = 'Failed to save entry';
       notifyListeners();
@@ -244,7 +262,6 @@ class FishingProvider extends ChangeNotifier {
 
     final success = await _storageService.saveEntries(_entries);
     if (!success) {
-      // Rollback on failure
       _entries.insert(index, removed);
       _error = 'Failed to delete entry';
       notifyListeners();
@@ -252,25 +269,13 @@ class FishingProvider extends ChangeNotifier {
     return success;
   }
 
-  /// Refreshes weather and moon data.
-  Future<void> refreshConditions() async {
-    _updateMoonPhase();
-    await _loadWeather();
-  }
-
-  /// Updates the moon phase based on current date.
-  /// Uses a simple approximation (lunar cycle ~29.5 days).
-  void _updateMoonPhase() {
-    // Reference: Jan 11, 2024 was approximately a new moon
+  /// Calculates fallback moon phase locally.
+  void _calculateFallbackMoonPhase() {
     final referenceDate = DateTime(2024, 1, 11);
     final daysSinceReference = DateTime.now().difference(referenceDate).inDays;
-    
-    // Lunar cycle is approximately 29.53 days
     const lunarCycle = 29.53;
     final daysIntoCycle = daysSinceReference % lunarCycle;
-    
-    // Divide cycle into 8 phases
-    _moonPhase = ((daysIntoCycle / lunarCycle) * 8).floor() % 8;
+    _fallbackMoonPhase = ((daysIntoCycle / lunarCycle) * 8).floor() % 8;
   }
 
   /// Clears the current error.
