@@ -303,84 +303,82 @@ class HomeScreen extends StatelessWidget {
   Widget _buildConditionsCard(BuildContext context, FishingProvider provider) {
     final isDark = CupertinoTheme.of(context).brightness == Brightness.dark;
     
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-      decoration: BoxDecoration(
-        color: isDark 
-            ? CupertinoColors.systemGrey6.darkColor 
-            : CupertinoColors.systemGrey6.color,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          // Wind speed
-          Row(
-            children: [
-              const Icon(
-                CupertinoIcons.wind,
-                size: 22,
-                color: CupertinoColors.systemTeal,
-              ),
-              const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${provider.windSpeed.toStringAsFixed(1)} km/h',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
+    return Row(
+      children: [
+        // Wind
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: isDark 
+                  ? CupertinoColors.systemGrey6.darkColor 
+                  : CupertinoColors.systemGrey6.color,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Column(
+              children: [
+                const Icon(
+                  CupertinoIcons.wind,
+                  size: 24,
+                  color: CupertinoColors.systemTeal,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  provider.windSpeed.toStringAsFixed(1),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
-                  Text(
-                    'Wind',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: CupertinoColors.secondaryLabel.resolveFrom(context),
-                    ),
+                ),
+                Text(
+                  'km/h',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: CupertinoColors.secondaryLabel.resolveFrom(context),
                   ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
-          Container(
-            width: 1,
-            height: 36,
-            color: CupertinoColors.separator.resolveFrom(context),
-          ),
-          // Humidity
-          Row(
-            children: [
-              const Icon(
-                CupertinoIcons.drop,
-                size: 22,
-                color: CupertinoColors.systemBlue,
-              ),
-              const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${provider.humidity}%',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
+        ),
+        const SizedBox(width: 12),
+        // Humidity
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: isDark 
+                  ? CupertinoColors.systemGrey6.darkColor 
+                  : CupertinoColors.systemGrey6.color,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Column(
+              children: [
+                const Icon(
+                  CupertinoIcons.drop,
+                  size: 24,
+                  color: CupertinoColors.systemBlue,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${provider.humidity}%',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
-                  Text(
-                    'Humidity',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: CupertinoColors.secondaryLabel.resolveFrom(context),
-                    ),
+                ),
+                Text(
+                  'Humidity',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: CupertinoColors.secondaryLabel.resolveFrom(context),
                   ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -388,72 +386,80 @@ class HomeScreen extends StatelessWidget {
   Widget _buildStatsCard(BuildContext context, FishingProvider provider) {
     final isDark = CupertinoTheme.of(context).brightness == Brightness.dark;
     
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-      decoration: BoxDecoration(
-        color: isDark 
-            ? CupertinoColors.systemGrey6.darkColor 
-            : CupertinoColors.systemGrey6.color,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildStatItem(
-            context,
-            CupertinoIcons.doc_text,
-            '${provider.entryCount}',
-            'Catches',
-          ),
-          Container(
-            width: 1,
-            height: 36,
-            color: CupertinoColors.separator.resolveFrom(context),
-          ),
-          _buildStatItem(
-            context,
-            CupertinoIcons.chart_bar,
-            '${provider.totalWeight.toStringAsFixed(1)} kg',
-            'Total Weight',
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Builds a single stat item.
-  Widget _buildStatItem(
-    BuildContext context,
-    IconData icon,
-    String value,
-    String label,
-  ) {
     return Row(
       children: [
-        Icon(
-          icon,
-          size: 22,
-          color: CupertinoColors.systemBlue,
+        // Catches
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: isDark 
+                  ? CupertinoColors.systemGrey6.darkColor 
+                  : CupertinoColors.systemGrey6.color,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Column(
+              children: [
+                const Icon(
+                  CupertinoIcons.doc_text,
+                  size: 24,
+                  color: CupertinoColors.systemGreen,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${provider.entryCount}',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  'Catches',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
-        const SizedBox(width: 8),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+        const SizedBox(width: 12),
+        // Total Weight
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: isDark 
+                  ? CupertinoColors.systemGrey6.darkColor 
+                  : CupertinoColors.systemGrey6.color,
+              borderRadius: BorderRadius.circular(14),
             ),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                color: CupertinoColors.secondaryLabel.resolveFrom(context),
-              ),
+            child: Column(
+              children: [
+                const Icon(
+                  CupertinoIcons.chart_bar,
+                  size: 24,
+                  color: CupertinoColors.systemOrange,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  provider.totalWeight.toStringAsFixed(1),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  'kg total',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ],
     );
