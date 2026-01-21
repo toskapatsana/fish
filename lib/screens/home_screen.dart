@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/fishing_provider.dart';
 import 'fishing_log_screen.dart';
+import 'settings_screen.dart';
 
 /// Home screen displaying current conditions and fishing index.
 /// 
@@ -15,9 +16,19 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
-      // Simple nav bar without refresh button (use pull-to-refresh instead)
-      navigationBar: const CupertinoNavigationBar(
-        middle: Text('Big Bass'),
+      navigationBar: CupertinoNavigationBar(
+        middle: const Text('Big Bass'),
+        trailing: CupertinoButton(
+          padding: EdgeInsets.zero,
+          child: const Icon(CupertinoIcons.settings),
+          onPressed: () {
+            Navigator.of(context).push(
+              CupertinoPageRoute(
+                builder: (context) => const SettingsScreen(),
+              ),
+            );
+          },
+        ),
       ),
       child: SafeArea(
         child: Consumer<FishingProvider>(

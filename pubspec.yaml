@@ -1,7 +1,7 @@
 name: fish
 description: "A lightweight fishing log app for fishermen"
 publish_to: 'none'
-version: 1.2.0+3
+version: 1.3.0+4
 
 environment:
   sdk: ^3.10.7
@@ -30,6 +30,9 @@ dependencies:
   
   # Location services
   geolocator: ^13.0.2
+  
+  # URL launcher for external links
+  url_launcher: ^6.3.1
 
 dev_dependencies:
   flutter_test:
